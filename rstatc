@@ -1,0 +1,18 @@
+#!/usr/bin/perl 
+# ~AsmodeuS~ asm@yes.net.ua (24.09.2002)
+# Usage
+# rmstatc host [type] [params]
+use IO::Socket;
+my $rstats_port = 30003;
+
+  $remote = IO::Socket::INET -> new(Proto => "tcp", PeerAddr => "@ARGV[0]", 
+                                  PeerPort => $rstats_port )
+  or die "cannot connect to rmstats port at @ARGV[0]:$rstats_port $!\n";
+
+#print "$ARGV[1] $ARGV[2]\n";
+print $remote "$ARGV[1] $ARGV[2]\n";
+
+while ( <$remote> ) { 
+  print;
+};
+

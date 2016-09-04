@@ -7,20 +7,35 @@ Futures
 =================================================
 
   ipfw       - Get bytes from ipfw
+
   snmp       - Get stats via SNMP
+
   iptable    - get from iptable
+
   net_bufs   - Get net FreeBSD buffer
+
   tun_count  - Get active tun interface
+
   load       - System load
+
   mysql      - Mysql Query and Slow Query
+
   memory     - FreeBSD memory
+
   memnocache - FreeBSD/Linux memory cache
+
   swap       - FreeBSD Swap info
+
   tuns_traf  - FreeBSD tun total traffic
+
   ng_count   - FreeBSD mpd interfaces count
+
   ppp_count  - Linux ppps counts
+
   mikrotik_ppp - Mikrotik ppp count
+
   mikrotik_load- Mikrotik load
+
   mikrotik_mem - Mikrotik memmory
 
 

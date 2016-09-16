@@ -74,6 +74,7 @@ elsif ($type eq 'addr') {
   &get_if($value);
   &show_traf($if);
 }
+elsif ($type eq 'radius')       { &radius($value);     }
 elsif ($type eq 'ipfw')         { &ipfw_stats($value);    }
 elsif ($type eq 'mikrotik_ppp') { &mikrotik_ppp($value);  }
 elsif ($type eq 'mikrotik_load'){ &mikrotik_load($value); }
@@ -773,4 +774,36 @@ sub parse_arguments {
   return \%args;
 }
 
-1
+#*******************************************************************
+# Freeradius
+#*******************************************************************
+sub radius {
+my ($choise) = @_;
+my %parsed = ();
+
+my $info = `echo "Message-Authenticator = 0x00, FreeRADIUS-Statistics-Type = 1, Response-Packet-Type = Access-Accept" | /usr/local/freeradius/bin/radclient -r 1 -x 127.0.0.1:18121 status adminsecret`;
+my @line_array = split("\n", $info);
+
+my @access = ("Access-Requests", "Access-Accepts");
+my @auth = ("Auth-Responses", "Auth-Invalid-Requests");
+
+ foreach my $line (@line_array) {
+    if ( my ($requests, $value) = $line =~ /FreeRADIUS\-Total\-(.*) = (.*)$/){
+     $parsed{$requests} = $value;
+    }
+ }
+
+ if($choise eq "access"){
+    foreach my $key (@access){
+     print $parsed{$key},"\n";
+    }
+ }
+
+ elsif ($choise eq "auth"){
+    foreach my $key (@auth){
+     print $parsed{$key},"\n";
+    }
+ }
+}
+
+1;

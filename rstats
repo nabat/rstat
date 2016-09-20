@@ -793,7 +793,7 @@ sub radius {
   my $info = `$cmd`;
   my @line_array = split("\n", $info);
 
-  my @access = ("Access-Requests", "Access-Accepts");
+  my @access = ("Access-Accepts", "Access-Requests");
   my @auth = ("Auth-Responses", "Auth-Invalid-Requests");
 
   foreach my $line (@line_array) {

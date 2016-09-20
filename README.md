@@ -63,7 +63,11 @@ mrtg.cnf
 
 
 Make periodic start
+
 /etc/crontab
+
+
 */5     *       *       *       *       root  /usr/local/bin/mrtg /usr/local/etc/mrtg/mrtg.cfg
+
 
 indexmaker /usr/local/etc/mrtg/mrtg.cfg > index.html

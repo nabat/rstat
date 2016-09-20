@@ -21,7 +21,8 @@
 #use strict;
 
 # Variables
-my $version  = '0.21';
+my $version  = '0.22';
+
 my $NETSTAT  = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
 my $SNMPWALK = `which snmpwalk` || '/usr/local/bin/snmpwalk';
@@ -58,7 +59,7 @@ my $config_file = $args->{conf} || "";
 read_config($config_file);
 
 my ($data, $data1);
-my $OS = uc($^O);
+my $OS = lc($^O);
 
 if ($args->{os} && $args->{os} eq 'linux') {
   $OS      = 'linux';

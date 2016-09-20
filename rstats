@@ -378,13 +378,14 @@ sub mysql_queries {
     exit(0);
   }
 
-  unless (open(my $MYSQLA, "$cmd |")) {
-    print STDERR "${$cmd}: ERROR: Can't open $cmd: $!";
-    exit(1);
+  my $mysqladmin_output = '';
+  if(open(my $MYSQLA, '-|', "$cmd")) {
+    $mysqladmin_output = join('', <$MYSQLA>);
+    close $MYSQLA;
   }
-
-  my $mysqladmin_output = join('', <MYSQLA>);
-  close $MYSQLA;
+  else {
+     print STDERR "${$cmd}: ERROR: Can't open $cmd: $!";
+  }
 
   my $questions     = 0;
   my $slow_queries  = 0;

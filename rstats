@@ -779,32 +779,44 @@ sub parse_arguments {
 # Freeradius
 #*******************************************************************
 sub radius {
-my ($choise) = @_;
-my %parsed = ();
+  my ($choise) = @_;
 
-my $info = `echo "Message-Authenticator = 0x00, FreeRADIUS-Statistics-Type = 1, Response-Packet-Type = Access-Accept" | /usr/local/freeradius/bin/radclient -r 1 -x 127.0.0.1:18121 status adminsecret`;
-my @line_array = split("\n", $info);
+  my %parsed = ();
+  my $RADCLIENT = `which radclient`;
+  chomp $RADCLIENT;
+  if (! $RADCLIENT) {
+    $RADCLIENT='/usr/local/freeradius/bin/radclient';
+  }
 
-my @access = ("Access-Requests", "Access-Accepts");
-my @auth = ("Auth-Responses", "Auth-Invalid-Requests");
+  my $cmd = qq{echo "Message-Authenticator = 0x00, FreeRADIUS-Statistics-Type = 3, Response-Packet-Type = Access-Accept" | $RADCLIENT -r 1 -x 127.0.0.1:18121 status adminsecret};
+  my $info = `$cmd`;
+  my @line_array = split("\n", $info);
 
- foreach my $line (@line_array) {
+  my @access = ("Access-Requests", "Access-Accepts");
+  my @auth = ("Auth-Responses", "Auth-Invalid-Requests");
+
+  foreach my $line (@line_array) {
     if ( my ($requests, $value) = $line =~ /FreeRADIUS\-Total\-(.*) = (.*)$/){
-     $parsed{$requests} = $value;
+      print "$requests - $value\n" if ($debug);
+      $parsed{$requests} = $value;
     }
- }
+  }
 
- if($choise eq "access"){
+  if($choise eq "access"){
     foreach my $key (@access){
-     print $parsed{$key},"\n";
+      print( (($parsed{$key}) ? $parsed{$key} :  0)."\n");
     }
- }
-
- elsif ($choise eq "auth"){
+  }
+  elsif ($choise eq "auth"){
     foreach my $key (@auth){
-     print $parsed{$key},"\n";
+      print(($parsed{$key} || 0)."\n");
     }
- }
+  }
+  elsif($choise =~ /(.+):(.+)/ ) {
+    print(($parsed{$1} || 0)."\n".($parsed{$2} || 0)."\n");
+  }
+
+  return 1
 }
 
 1;

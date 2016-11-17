@@ -21,7 +21,7 @@
 #use strict;
 
 # Variables
-my $version  = '0.22';
+my $version  = '0.23';
 
 my $NETSTAT  = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -795,12 +795,18 @@ sub radius {
 
   my @access = ("Access-Accepts", "Access-Requests");
   my @auth = ("Auth-Responses", "Auth-Invalid-Requests");
+  my @acct = ("Requests", "Responses");
 
   foreach my $line (@line_array) {
-    if ( my ($requests, $value) = $line =~ /FreeRADIUS\-Total\-(.*) = (.*)$/){
+    my ($requests, $value) ;
+    if ( ($requests, $value) = $line =~ /FreeRADIUS\-Total\-(.*) = (.*)$/){
       print "$requests - $value\n" if ($debug);
       $parsed{$requests} = $value;
     }
+    elsif( ($requests, $value) = $line =~ /Accounting\-(.*) = (.*)$/){
+      print "$requests - $value\n" if ($debug);
+      $parsed{$requests} = $value;
+   }
   }
 
   if($choise eq "access"){
@@ -810,6 +816,11 @@ sub radius {
   }
   elsif ($choise eq "auth"){
     foreach my $key (@auth){
+      print(($parsed{$key} || 0)."\n");
+    }
+  }
+  elsif ($choise eq "acct"){
+    foreach my $key (@acct){
       print(($parsed{$key} || 0)."\n");
     }
   }

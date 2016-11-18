@@ -1,3 +1,4 @@
+#w
 #!/usr/bin/perl -w
 # Interfaces statistic server
 # Version: 0.10
@@ -21,7 +22,7 @@
 #use strict;
 
 # Variables
-my $version  = '0.23';
+my $version  = '0.24';
 
 my $NETSTAT  = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -36,6 +37,7 @@ my $footer = "";
 my $type   = '';
 my $value  = '';
 
+$ENV{PATH}=$ENV{PATH}.":/usr/bin:/usr/local/bin";
 
 chop($NETSTAT);
 chop($SNMPWALK);

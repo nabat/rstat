@@ -683,15 +683,26 @@ sub get_if () {
 }
 
 #**********************************************************
-#
+=head2 show_traf($if, $attr) - show traffic
+
+  Arguments:
+    $if
+    $attr
+
+=cut
 #**********************************************************
-sub show_traf () {
+sub show_traf {
   my ($if, $attr) = @_;
 
   my $inb     = 0;
   my $otb     = 0;
   my %columns = ();
   my @cols    = ();
+
+  if(! $if) {
+   print "show_traf: Interface not specified\n";
+   exit;
+  }
 
   if ($OS eq 'linux') {
     if ($args->{NETSTAT})  {
@@ -754,6 +765,8 @@ sub show_traf () {
   $otb = int($otb);
 
   print "$inb\n$otb\n<$if> ";
+
+  return 1;
 }
 
 #*******************************************************************

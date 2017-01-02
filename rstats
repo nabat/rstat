@@ -21,7 +21,7 @@
 #use strict;
 
 # Variables
-my $version  = '0.24';
+my $version  = '0.25';
 
 my $NETSTAT  = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -352,7 +352,17 @@ sub memnocache {
 }
 
 #**********************************************************
-# Get Mysql queries
+=head2 mysql_queries() -  Mysql queries
+
+  Arguments:
+    status
+       Connections
+       Table_locks_immediate
+
+       Threads_running
+       Threads_connected
+
+=cut
 #**********************************************************
 sub mysql_queries {
   my $mysql_user       = (($config{mysql_user})       ? $config{mysql_user}       : '');
@@ -360,19 +370,25 @@ sub mysql_queries {
   my $mysql_host       = (($config{mysql_host})       ? $config{mysql_host}       : 'localhost');
   my $mysql_mysqladmin = (($config{mysql_mysqladmin}) ? $config{mysql_mysqladmin} : 'mysqladmin');
   my $mysql_port       = (($config{mysql_port})       ? $config{mysql_port}       : '3306');
-
+  
+  my @status_keys = ();
   # construct command used for calling mysqladmin
-  my $cmd = "$mysql_mysqladmin -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password " .
+  my $cmd = "$mysql_mysqladmin -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password "; 
 
   # Note that we use the "version" command rather than
   # the "status" command, as version returns the same
   # status info plus the version number, albeit formatted
   # somewhat differently. As a plus, it also returns the
   # uptime info in a much more human-readable format.
-  "status version " .
-
+  if($args->{status}) {
+    @status_keys = split(/,\s?/, $args->{status});
+    $cmd .= 'extended-status ';
+  }
+  else { 
+    $cmd .= 'status version ';
+  }
   # we need to redirect stderr to catch error messages
-  "2>&1 " . "";
+  $cmd .= "2>&1 ";
 
   if ($debug > 0) {
     print "$cmd\n";
@@ -392,6 +408,23 @@ sub mysql_queries {
   my $slow_queries  = 0;
   my $mysql_version = 'Unknown';
   my $mysql_uptime  = '';
+
+  if($#status_keys > -1) {
+    #$footer = "$mysql_uptime $mysql_version\n";
+    #print "$questions\n$slow_queries\n";
+    my %info_hash = ();
+    my @rows = split(/\n\r?/, $mysqladmin_output);
+    foreach my $line (@rows) {
+      if($line =~ /^\|\s+(\S+)\s+\|\s+(\S+)\s+\|/) { 
+        my $key = $1;
+        my $val = $2;
+        print ">> $key - $val\n" if($debug > 1);
+        $info_hash{$key}=$val;
+      }
+    }
+    print "$info_hash{$status_keys[0]}\n$info_hash{$status_keys[1]}\n";
+    return 1;
+  }
 
   #Get queries count
   if ($mysqladmin_output =~ /^.mysqladmin:/) {

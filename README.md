@@ -3,7 +3,9 @@
 rstat client/server utility for mrtg graphics
 
 =================================================
+
 Futures
+
 =================================================
 
   ipfw       - Get bytes from ipfw
@@ -41,7 +43,9 @@ Futures
 
 
 =================================================
+
 Installation:
+
 =================================================
   # tar zxvf rstat-0.21.tgz
   # make install

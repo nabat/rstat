@@ -3,15 +3,17 @@
 
   Interfaces statistic server for MRTG
 
+=head1 USAGE
+
+  rmstats [type] [params]
+
 =head1 VERSION
 
   Version: 0.30
 
-=cut
-
 =head1 Author
 
- ~AsmodeuS~ (27.01.2007) mailto:asm@yes.net.ua
+ ~AsmodeuS~ (2007-2018) mailto:asm [at] abills.net.ua
 
 =cut
 

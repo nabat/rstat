@@ -21,7 +21,7 @@
 #use strict;
 
 # Variables
-my $version  = '0.25';
+my $version  = '0.26';
 
 my $NETSTAT  = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -36,7 +36,7 @@ my $footer = "";
 my $type   = '';
 my $value  = '';
 
-$ENV{PATH}=$ENV{PATH}.":/usr/bin:/usr/local/bin";
+$ENV{PATH}=($ENV{PATH} || q{}).":/usr/bin:/usr/local/bin";
 
 chop($NETSTAT);
 chop($SNMPWALK);

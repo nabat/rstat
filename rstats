@@ -559,7 +559,7 @@ sub if_count {
   my $count = 0;
 
   if($attr && $attr->{ipoe}) {
-    my $cmd = "/bin/cat /proc/net/dev |/bin/grep ipoe |/bin/wc -l";
+    my $cmd = "/bin/cat /proc/net/dev |/bin/grep ipoe |/usr/bin/wc -l";
     $count = `$cmd`;
     chomp($count);
   }

@@ -1,42 +1,40 @@
 #!/usr/bin/perl -w
-# Interfaces statistic server
-# Version: 0.10
-# ~AsmodeuS~ (27.01.2007) mailto:asm@yes.net.ua
-# FreeBSD Version
-# Changelog:
-# 0.04 (12.07.2002) iptables
-# 0.05 (24.09.2002) mbufs/mbuf / Params: net_bufs
-# 0.06 (13.10.2005) tun_count
-# 0.07 27.01.2007 Mysql, load config
-# 0.08 12.04.2007 FreeBSD memory use
-# 0.09 16.05.2007 tun traffic count
-# 0.10 25.09.2007 LinuxIIn interface traffic counter
-# 0.11 05.03.2008 Ping control
-# 0.13 05.03.2008 Change freebsd iface stats
-# 0.14 07.04.2008 Add CPU temperature. Add freebsd 8
-# 0.20 12.05.2014 Update linux load
-# 0.21 12.01.2015 Add mikrotik ppp,load,mem. SNMP AVG params
+=head1 NAME
 
+  Interfaces statistic server for MRTG
 
-#use strict;
+=head1 VERSION
+
+  Version: 0.30
+
+=cut
+
+=head1 Author
+
+ ~AsmodeuS~ (27.01.2007) mailto:asm@yes.net.ua
+
+=cut
+
+use strict;
+use warnings;
 
 # Variables
-my $version  = '0.26';
+my $version = '0.30';
 
-my $NETSTAT  = `which netstat` || '/usr/bin/netstat';
+my $NETSTAT = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
 my $SNMPWALK = `which snmpwalk` || '/usr/local/bin/snmpwalk';
 my $IFCONFIG = '/sbin/ifconfig';
-my $IPFW     = '/sbin/ipfw';
-my $debug    = 0;
+my $IPFW = '/sbin/ipfw';
+my $debug = 0;
 
 my %config = ();
-my $output = "";
+#my $output = "";
 my $footer = "";
-my $type   = '';
-my $value  = '';
+my $type = '';
+my $value = '';
 
-$ENV{PATH}=($ENV{PATH} || q{}).":/usr/bin:/usr/local/bin";
+$ENV{PATH} = ($ENV{PATH} || q{}) . ":/usr/bin:/usr/local/bin";
 
 chop($NETSTAT);
 chop($SNMPWALK);
@@ -46,12 +44,12 @@ if ($#ARGV > -1) {
   $value = $ARGV[1];
 }
 else {
-  $params = <>;
+  my $params = <>;
   chop($params);
   ($type, $value) = split(/ /, $params);
 }
 
-# print "$type - $value";
+$type //= q{};
 
 my $args = parse_arguments(\@ARGV);
 $debug = $args->{debug} if ($args->{debug});
@@ -63,7 +61,7 @@ my ($data, $data1);
 my $OS = lc($^O);
 
 if ($args->{os} && $args->{os} eq 'linux') {
-  $OS      = 'linux';
+  $OS = 'linux';
   $NETSTAT = '/bin/netstat';
 }
 
@@ -71,29 +69,30 @@ if ($args->{debug}) {
   print "Debug: $args->{debug}\n";
 }
 
-if ($type eq 'iface') { &show_traf($value) }
+if ($type eq 'iface') {&show_traf($value)}
 elsif ($type eq 'addr') {
-  &get_if($value);
-  &show_traf($if);
+  my $ifname = get_if($value);
+  show_traf($ifname);
 }
-elsif ($type eq 'radius')       { &radius($value);     }
-elsif ($type eq 'ipfw')         { &ipfw_stats($value);    }
-elsif ($type eq 'mikrotik_ppp') { &mikrotik_ppp($value);  }
-elsif ($type eq 'mikrotik_load'){ &mikrotik_load($value); }
-elsif ($type eq 'mikrotik_mem') { &mikrotik_mem($value);  }
-elsif ($type eq 'snmp')         { &snmp_stats($value); }
-elsif ($type eq 'iptable')      { &iptables_stats();   }
-elsif ($type eq 'net_bufs')     { &net_bufs_stats();   }
-elsif ($type eq 'tun_count')    { &if_count();         }
-elsif ($type eq 'ng_count')     { &if_count({ ng => 1 }); }
-elsif ($type eq 'ppp_count')    { &if_count();         }
-elsif ($type eq 'load')         { &load();             }
-elsif ($type eq 'mysql')        { &mysql_queries();    }
-elsif ($type eq 'memory')       { &memory();           }
-elsif ($type eq 'memnocache')   { &memnocache();       }
-elsif ($type eq 'tuns_traf')    { &tuns_traf();        }
-elsif ($type eq 'swap')         { &swap_info();        }
-elsif ($type eq 'help')         { &help();             }
+elsif ($type eq 'radius') {&radius($value);}
+elsif ($type eq 'ipfw') {&ipfw_stats($value);}
+elsif ($type eq 'mikrotik_ppp') {&mikrotik_ppp($value);}
+elsif ($type eq 'mikrotik_load') {&mikrotik_load($value);}
+elsif ($type eq 'mikrotik_mem') {&mikrotik_mem($value);}
+elsif ($type eq 'snmp') {&snmp_stats($value);}
+elsif ($type eq 'iptable') {&iptables_stats();}
+elsif ($type eq 'net_bufs') {&net_bufs_stats();}
+elsif ($type eq 'tun_count') {&if_count();}
+elsif ($type eq 'ng_count') {&if_count({ ng => 1 });}
+elsif ($type eq 'ppp_count') {&if_count();}
+elsif ($type eq 'ipoe_count') {&if_count({ ipoe => 1 });}
+elsif ($type eq 'load') {&load();}
+elsif ($type eq 'mysql') {&mysql_queries();}
+elsif ($type eq 'memory') {&memory();}
+elsif ($type eq 'memnocache') {&memnocache();}
+elsif ($type eq 'tuns_traf') {&tuns_traf();}
+elsif ($type eq 'swap') {&swap_info();}
+elsif ($type eq 'help') {&help();}
 
 if ($footer eq '') {
   print `uptime`;
@@ -103,11 +102,13 @@ else {
 }
 
 #**********************************************************
-# Memory use
-#**********************************************************
-sub help () {
+=head2 help
 
-  print << "[END]";
+=cut
+#**********************************************************
+sub help {
+
+  print <<"[END]";
 Version: $version
   ipfw       - Get bytes from ipfw
   snmp       - Get info via SNMP
@@ -139,12 +140,14 @@ Version: $version
 }
 
 #**********************************************************
-# mikrotik_ppp
+=head2 mikrotik_ppp() - mikrotik_ppp
+
+=cut
 #**********************************************************
-sub mikrotik_ppp () {
+sub mikrotik_ppp {
   my ($remote_ip) = shift;
 
-  if (! $remote_ip) {
+  if (!$remote_ip) {
     print "Enter mikrotik ip: 
   rstats mikrotik_ppp [mikrotik_ip]    
     \n";
@@ -152,57 +155,62 @@ sub mikrotik_ppp () {
   }
 
   my $remote_user = $config{REMOTE_USER} || 'abills_admin';
-  my $remote_cert = $config{REMOTE_CERT} || '/usr/abills/Certs/id_dsa.'.$remote_user;
-  
-  my ($ip, $port)=split(/:/, $remote_ip);
-  
-  if (! $port) {
-    $port=22; 
+  my $remote_cert = $config{REMOTE_CERT} || '/usr/abills/Certs/id_dsa.' . $remote_user;
+
+  my ($ip, $port) = split(/:/, $remote_ip);
+
+  if (!$port) {
+    $port = 22;
   }
-  
+
   my $cmd = qq{ssh -p $port -l $remote_user -i $remote_cert $ip "/ppp active print count-only"};
 
-  if ($debug>2) {
+  if ($debug > 2) {
     print "$cmd \n";
   }
-  
-  my $result=`$cmd`;
 
-  print $result."0\n";
+  my $result = `$cmd`;
+
+  print $result . "0\n";
 }
 
 #**********************************************************
-#         uptime: .1.3.6.1.2.1.1.3.0
-#   total-memory: .1.3.6.1.2.1.25.2.3.1.5.65536
-#    used-memory: .1.3.6.1.2.1.25.2.3.1.6.65536
-#  cpu-frequency: .1.3.6.1.4.1.14988.1.1.3.14.0
-#     build-time: .1.3.6.1.4.1.14988.1.1.7.6.0
-#
+=head2 mikrotik_mem()
+
+         uptime: .1.3.6.1.2.1.1.3.0
+   total-memory: .1.3.6.1.2.1.25.2.3.1.5.65536
+    used-memory: .1.3.6.1.2.1.25.2.3.1.6.65536
+  cpu-frequency: .1.3.6.1.4.1.14988.1.1.3.14.0
+     build-time: .1.3.6.1.4.1.14988.1.1.7.6.0
+
+=cut
 #**********************************************************
-sub mikrotik_mem () {
+sub mikrotik_mem {
   my ($remote_ip) = shift;
 
-  snmp_stats($remote_ip, { 
+  snmp_stats($remote_ip, {
     IN  => '.1.3.6.1.2.1.25.2.3.1.5.65536',
     OUT => '.1.3.6.1.2.1.25.2.3.1.6.65536'
-    });
+  });
 
+  return 1;
 }
 
 #**********************************************************
-#
+=head2 mikrotik_mem()
+
+=cut
 #**********************************************************
-sub mikrotik_load () {
+sub mikrotik_load {
   my ($remote_ip) = shift;
 
-  snmp_stats($remote_ip, { 
+  snmp_stats($remote_ip, {
     AVG => '.1.3.6.1.2.1.25.3.3.1.2'
     #IN  => '.1.3.6.1.2.1.25.3.3.1.2.1', #'.1.3.6.1.4.1.14988.1.1.3.14.0',
     #OUT => '.1.3.6.1.2.1.25.3.3.1.2.1', #'.1.3.6.1.4.1.14988.1.1.3.14.0'
-    });
+  });
 
 }
-
 
 
 #**********************************************************
@@ -224,25 +232,28 @@ sub swap_info {
 }
 
 #**********************************************************
-# Memory use
-#**********************************************************
-sub tuns_traf () {
+=head2 tuns_traf() Memory use
 
-  my $res       = '';
-  my $total_in  = 0;
+=cut
+#**********************************************************
+sub tuns_traf {
+
+  my $total_in = 0;
   my $total_out = 0;
 
-  open(my $IFC, "$NETSTAT -in |") || die "Can't open file '$IFCONFIG' $!\n";
+  my %info = ();
+
+  open(my $IFC, '-|', "$NETSTAT -in") || die "Can't open file '$IFCONFIG' $!\n";
   while (my $l = <$IFC>) {
     if ($l =~ /(tun\d+)[*]{0,1} +(\d+) +<Link#\d+> +(\d+) +(\d+) +(\d+) +(\d+) +(\d+)/) {
       my $iface = $1;
-      $info{$iface}{MTU}       = $2;
-      $info{$iface}{IN}        = $3;
-      $info{$iface}{IN_ERROR}  = $4;
-      $info{$iface}{OUT}       = $5;
+      $info{$iface}{MTU} = $2;
+      $info{$iface}{IN} = $3;
+      $info{$iface}{IN_ERROR} = $4;
+      $info{$iface}{OUT} = $5;
       $info{$iface}{OUT_ERROR} = $6;
-      $info{$iface}{COLL}      = $7;
-      $total_in  += $info{$iface}{IN};
+      $info{$iface}{COLL} = $7;
+      $total_in += $info{$iface}{IN};
       $total_out += $info{$iface}{OUT};
     }
   }
@@ -252,15 +263,13 @@ sub tuns_traf () {
 }
 
 #*******************************************
-#   round the physical memory size to the next power of two which is
-#   reasonable for memory cards. We do this by first determining the
-#   guessed memory card size under the assumption that usual computer
-#   hardware has an average of a maximally eight memory cards installed
-#   and those are usually of equal size.
+=head2 mem_rounded($mem_size)
+
+=cut
 #*******************************************
 sub mem_rounded {
   my ($mem_size) = @_;
-  my $chip_size  = 1;
+  my $chip_size = 1;
   my $chip_guess = ($mem_size / 8) - 1;
 
   while ($chip_guess != 0) {
@@ -274,17 +283,19 @@ sub mem_rounded {
 }
 
 #**********************************************************
-# Memory use
+=head2 memory() Memory use
+
+=cut
 #**********************************************************
 sub memory {
 
   if ($OS eq 'linux') {
     #need a fix use : free
-    $ligne = `free | grep Mem`;
+    my $ligne = `free | grep Mem`;
     $ligne =~ /em: *(\d+) *(\d+)/;
 
     #$1 total $2 used
-    $data  = $1;
+    $data = $1;
     $data1 = $2;
   }
   else {
@@ -294,22 +305,22 @@ sub memory {
     #          (undef, $pagesize) = split(/ /, `/sbin/sysctl vm.stats.vm.v_page_size`);
     #           (undef, $memtotl) = split(/ /, `/sbin/sysctl vm.stats.vm.v_page_count`);
 
-    (undef, $sysctl{"hw.pagesize"})                  = split(/: /, `/sbin/sysctl hw.pagesize`);
-    (undef, $sysctl{"hw.physmem"})                   = split(/: /, `/sbin/sysctl hw.physmem`);
+    (undef, $sysctl{"hw.pagesize"}) = split(/: /, `/sbin/sysctl hw.pagesize`);
+    (undef, $sysctl{"hw.physmem"}) = split(/: /, `/sbin/sysctl hw.physmem`);
     (undef, $sysctl{"vm.stats.vm.v_inactive_count"}) = split(/: /, `/sbin/sysctl vm.stats.vm.v_inactive_count`);
-    (undef, $sysctl{"vm.stats.vm.v_cache_count"})    = split(/: /, `/sbin/sysctl vm.stats.vm.v_cache_count`);
-    (undef, $sysctl{"vm.stats.vm.v_free_count"})     = split(/: /, `/sbin/sysctl vm.stats.vm.v_free_count`);
+    (undef, $sysctl{"vm.stats.vm.v_cache_count"}) = split(/: /, `/sbin/sysctl vm.stats.vm.v_cache_count`);
+    (undef, $sysctl{"vm.stats.vm.v_free_count"}) = split(/: /, `/sbin/sysctl vm.stats.vm.v_free_count`);
 
-    my $mem_hw       = &mem_rounded($sysctl{"hw.physmem"});
+    my $mem_hw = &mem_rounded($sysctl{"hw.physmem"});
     my $mem_inactive = $sysctl{"vm.stats.vm.v_inactive_count"} * $sysctl{"hw.pagesize"};
-    my $mem_cache    = $sysctl{"vm.stats.vm.v_cache_count"} * $sysctl{"hw.pagesize"};
-    my $mem_free     = $sysctl{"vm.stats.vm.v_free_count"} * $sysctl{"hw.pagesize"};
+    my $mem_cache = $sysctl{"vm.stats.vm.v_cache_count"} * $sysctl{"hw.pagesize"};
+    my $mem_free = $sysctl{"vm.stats.vm.v_free_count"} * $sysctl{"hw.pagesize"};
 
     my $mem_total = $mem_hw;
     my $mem_avail = $mem_inactive + $mem_cache + $mem_free;
-    my $mem_used  = $mem_total - $mem_avail;
+    my $mem_used = $mem_total - $mem_avail;
 
-    $data  = $mem_used;
+    $data = $mem_used;
     $data1 = $mem_total;
 
     #           $memtotl *= $pagesize;
@@ -320,31 +331,35 @@ sub memory {
   }
 
   print "$data\n$data1\n";
+
+  return 1;
 }
 
 #**********************************************************
-# Memory cache
+=head2 memnocache() Memory cache
+
+=cut
 #**********************************************************
 sub memnocache {
 
   if ($OS eq 'linux') {
-    $ligne = `free | grep cache`;
+    my $ligne = `free | grep cache`;
     $ligne =~ /cache: *(\d+) *(\d+)/;
 
     #$1 used $2 free so we need to do a sum for $data1
-    $data  = $1;
+    $data = $1;
     $data1 = $1 + $2;
   }
   else {
     # FreeBSD should have one day a free command like... that suck :(
-    (undef, $pagesize) = split(/ /, `sysctl vm.stats.vm.v_page_size`);
-    (undef, $memtotl)  = split(/ /, `sysctl vm.stats.vm.v_page_count`);
+    my (undef, $pagesize) = split(/ /, `sysctl vm.stats.vm.v_page_size`);
+    my (undef, $memtotl) = split(/ /, `sysctl vm.stats.vm.v_page_count`);
     $memtotl *= $pagesize;
-    (undef, $memfree) = split(/ /, `sysctl vm.stats.vm.v_free_count`);
+    my (undef, $memfree) = split(/ /, `sysctl vm.stats.vm.v_free_count`);
     $memfree *= $pagesize;
-    (undef, $memcach) = split(/ /, `sysctl vm.stats.vm.v_cache_count`);
+    my (undef, $memcach) = split(/ /, `sysctl vm.stats.vm.v_cache_count`);
     $memcach *= $pagesize;
-    $data  = $memtotl;
+    $data = $memtotl;
     $data1 = $memtotl - $memfree - $memcach;
   }
 
@@ -365,26 +380,26 @@ sub memnocache {
 =cut
 #**********************************************************
 sub mysql_queries {
-  my $mysql_user       = (($config{mysql_user})       ? $config{mysql_user}       : '');
-  my $mysql_password   = (($config{mysql_password})   ? $config{mysql_password}   : '');
-  my $mysql_host       = (($config{mysql_host})       ? $config{mysql_host}       : 'localhost');
+  my $mysql_user = (($config{mysql_user}) ? $config{mysql_user} : '');
+  my $mysql_password = (($config{mysql_password}) ? $config{mysql_password} : '');
+  my $mysql_host = (($config{mysql_host}) ? $config{mysql_host} : 'localhost');
   my $mysql_mysqladmin = (($config{mysql_mysqladmin}) ? $config{mysql_mysqladmin} : 'mysqladmin');
-  my $mysql_port       = (($config{mysql_port})       ? $config{mysql_port}       : '3306');
-  
+  my $mysql_port = (($config{mysql_port}) ? $config{mysql_port} : '3306');
+
   my @status_keys = ();
   # construct command used for calling mysqladmin
-  my $cmd = "$mysql_mysqladmin -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password "; 
+  my $cmd = "$mysql_mysqladmin -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password ";
 
   # Note that we use the "version" command rather than
   # the "status" command, as version returns the same
   # status info plus the version number, albeit formatted
   # somewhat differently. As a plus, it also returns the
   # uptime info in a much more human-readable format.
-  if($args->{status}) {
+  if ($args->{status}) {
     @status_keys = split(/,\s?/, $args->{status});
     $cmd .= 'extended-status ';
   }
-  else { 
+  else {
     $cmd .= 'status version ';
   }
   # we need to redirect stderr to catch error messages
@@ -396,30 +411,30 @@ sub mysql_queries {
   }
 
   my $mysqladmin_output = '';
-  if(open(my $MYSQLA, '-|', "$cmd")) {
+  if (open(my $MYSQLA, '-|', "$cmd")) {
     $mysqladmin_output = join('', <$MYSQLA>);
     close $MYSQLA;
   }
   else {
-     print STDERR "${$cmd}: ERROR: Can't open $cmd: $!";
+    print STDERR "${$cmd}: ERROR: Can't open $cmd: $!";
   }
 
-  my $questions     = 0;
-  my $slow_queries  = 0;
+  my $questions = 0;
+  my $slow_queries = 0;
   my $mysql_version = 'Unknown';
-  my $mysql_uptime  = '';
+  my $mysql_uptime = '';
 
-  if($#status_keys > -1) {
+  if ($#status_keys > -1) {
     #$footer = "$mysql_uptime $mysql_version\n";
     #print "$questions\n$slow_queries\n";
     my %info_hash = ();
     my @rows = split(/\n\r?/, $mysqladmin_output);
     foreach my $line (@rows) {
-      if($line =~ /^\|\s+(\S+)\s+\|\s+(\S+)\s+\|/) { 
+      if ($line =~ /^\|\s+(\S+)\s+\|\s+(\S+)\s+\|/) {
         my $key = $1;
         my $val = $2;
-        print ">> $key - $val\n" if($debug > 1);
-        $info_hash{$key}=$val;
+        print ">> $key - $val\n" if ($debug > 1);
+        $info_hash{$key} = $val;
       }
     }
     print "$info_hash{$status_keys[0]}\n$info_hash{$status_keys[1]}\n";
@@ -465,13 +480,15 @@ sub mysql_queries {
 }
 
 #**********************************************************
-# Load dat from config
+=head2 read_config($configfile)  Load date from config
+
+=cut
 #**********************************************************
 sub read_config {
   my ($configfile) = @_;
 
   if (-f "$configfile") {
-    open(my $FILE, "$configfile") || die "Can't open config '$configfile' $!\n";
+    open(my $FILE, '<', "$configfile") || die "Can't open config '$configfile' $!\n";
     while (<$FILE>) {
       if (/^#/) {
         next;
@@ -487,6 +504,8 @@ sub read_config {
   while (my ($k, $v) = each(%$args)) {
     $config{$k} = $v;
   }
+
+  return 1;
 }
 
 #**********************************************************
@@ -497,24 +516,24 @@ sub load {
 
   if ($OS eq 'linux') {
     $ligne =~ /average:.+, ([\d\.\,]+), ([\d\.\,]+)/;
-    $data  = $1;
+    $data = $1;
     $data1 = $2;
 
     $data =~ s/,/\./g;
-    $data1=~ s/,/\./g;
+    $data1 =~ s/,/\./g;
 
-    $data  = $data * 100;
+    $data = $data * 100;
     $data1 = $data1 * 100;
   }
   else {
     if ($ligne =~ /averages:.+, ([\d.]+), ([\d.]+)/) {
-      $data  = $1 * 100;
+      $data = $1 * 100;
       $data1 = $2 * 100;
     }
     else {
       $ligne =~ s/,/\./g;
       $ligne =~ /averages:\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)/;
-      $data  = $1 * 100;
+      $data = $1 * 100;
       $data1 = $2 * 100;
     }
   }
@@ -523,21 +542,33 @@ sub load {
 }
 
 #**********************************************************
-#Tun count
+=head2 if_count($attr) - tun if count
+
+  Arguments:
+    $attr
+      ng
+      ipoe
+
+=cut
 #**********************************************************
 sub if_count {
   my ($attr) = @_;
-  my $res    = '';
-  my $count  = 0;
+  my $res = '';
+  my $count = 0;
 
-  if ($OS eq 'linux') {
+  if($attr && $attr->{ipoe}) {
+    my $cmd = "cat /proc/net/dev |grep ipoe |wc -l";
+    $count = `$cmd`;
+    chomp($count);
+  }
+  elsif ($OS eq 'linux') {
     my $cmd = "$IFCONFIG |awk '{ printf \"" . '\n' . "\" \$1}' |grep ppp | wc -l";
     $count = `$cmd`;
     chomp($count);
   }
   else {
     my $iface = ($attr->{ng}) ? 'ng' : 'tun';
-    open(my $IFC, "$IFCONFIG -u |") || die "Can't open file '$IFCONFIG' $!";
+    open(my $IFC, '-|', "$IFCONFIG -u") || die "Can't open file '$IFCONFIG' $!";
     while (my $l = <$IFC>) {
       if ($l =~ /^$iface\d+:/) {
         $res .= $l;
@@ -548,34 +579,43 @@ sub if_count {
   }
 
   print "$count\n$count\n";
+
+  return 1;
 }
 
 #**********************************************************
-# Get ipfw stats / ipfw show [NUMS...] (FreeBSD)
+=head2 ipfw_stats($val) - Get ipfw stats / ipfw show [NUMS...] (FreeBSD)
+
+=cut
 #**********************************************************
-sub ipfw_stats () {
+sub ipfw_stats {
   my $val = shift;
 
   my ($i, $o) = split(/:/, $val);
-  open(my $PROG, "$IPFW show $i $o |");
-    while (my $l = <$PROG>) {
-      @f = split(/ +/, $l);
-      print $f[2], "\n";
-    }
+  open(my $PROG, '-|', "$IPFW show $i $o ");
+  while (my $l = <$PROG>) {
+    my @f = split(/ +/, $l);
+    print $f[2], "\n";
+  }
   close($PROG);
+
+
 }
 
 #**********************************************************
-# Get current mbufs/mbuf stats / netstat -m (FreeBSD)
+=head2 net_bufs_stats() Get current mbufs/mbuf stats / netstat -m (FreeBSD)
+
+=cut
 #**********************************************************
 sub net_bufs_stats {
-  my $mcur  = 0;
-  my $mpic  = 0;
-  my $mmax  = 0;
+  my $mcur = 0;
+  my $mpic = 0;
+  my $mmax = 0;
   my $mbmax = 0;
   my $mbpic = 0;
+  my $mbcur = 0;
 
-  open(my $PROG, "$NETSTAT -m|");
+  open(my $PROG, '-|', "$NETSTAT -m");
   while (my $line = <$PROG>) {
     if ($line =~ /mbufs in use/) {
       ($mbcur, $mbpic, $mbmax) = split(/\/| /, $line);
@@ -589,20 +629,25 @@ sub net_bufs_stats {
   print "$mbcur\n$mcur\n";
 
   #mbufs in use: $mbpic/$mbmax mbuf clusters in use: $mpic/$mmax";
+  return 1;
 }
 
 #**********************************************************
-# Get stats from ipchains (Linux)
+=head2 iptables_stats() - Get stats from ipchains (Linux)
+
+=cut
 #**********************************************************
-sub iptables_stats () {
+sub iptables_stats {
 
   my ($fst, $pkg, $byte, $rule, $prot, $opt, $in, $out, $rm_addr, $other);
+  my $inb = 0;
+  my $otb = 0;
 
-  open(my $IFS, "$IPTABLES -L -n -v -x |");
+  open(my $IFS, '-}', "$IPTABLES -L -n -v -x ");
   while (my $l = <$IFS>) {
     chomp $l;
     ($fst, $pkg, $byte, $rule, $prot, $opt, $in, $out, $rm_addr, $other) =
-    split(/ +/, $l);
+      split(/ +/, $l);
     if ($rm_addr =~ /217/) {
 
       #    print "$fst, $pkg, $byte, $rule, $prot, $opt, $in, $out, $rm_addr\n\n";
@@ -610,47 +655,50 @@ sub iptables_stats () {
     }
   }
   close($IFS);
+
   $inb = $inb + 0;
   $otb = $otb + 0;
 
-  print "$inb\n$otb\n<$if> ";
+  print "$inb\n$otb\n<__> ";
 }
 
 #**********************************************************
-# Get trafic from snmp interface
+=head2 snmp_stats($value, $attr) - Get trafic from snmp interface
+
+=cut
 #**********************************************************
-sub snmp_stats () {
-  my ($value, $attr) = @_;
+sub snmp_stats {
+  my (undef, $attr) = @_;
 
   my ($server, $nas_port) = split(/_/, $value);
 
-  if (! -f $SNMPWALK) {
+  if (!-f $SNMPWALK) {
     print "'$SNMPWALK' not install please install program\n";
-    exit; 
+    exit;
   }
 
   my $community = $config{SNMP_COMMUNITY} || 'public';
-  my $OID_AVG   = $config{OID_AVG} || $attr->{AVG};
-  my $OID_IN    = $config{OID_IN} || $attr->{IN};
-  my $OID_OUT   = $config{OID_OUT} || $attr->{OUT};
+  my $OID_AVG = $config{OID_AVG} || $attr->{AVG};
+  my $OID_IN = $config{OID_IN} || $attr->{IN};
+  my $OID_OUT = $config{OID_OUT} || $attr->{OUT};
 
-  if ($OID_AVG)  {
-    my $in  = 0;
+  if ($OID_AVG) {
+    my $in = 0;
     my $out = 0;
 
     my $snmp_in = `$SNMPWALK -On -v1 -c $community  $server $attr->{AVG}`;
     my @arr = split(/[\r\n]/, $snmp_in);
-    
+
     my $count = 0;
     foreach my $line (@arr) {
-      ($inface, $a, $b, $in_val) = split(/ /, $line);
+      my (undef, undef, undef, $in_val) = split(/ /, $line);
 
-      $in+=$in_val;
+      $in += $in_val;
 
-      $count++; 
+      $count++;
     }
-    
-    $in = int($in/$count);
+
+    $in = int($in / $count);
     $out = $in;
 
     print "$in\n$out\n";
@@ -658,20 +706,19 @@ sub snmp_stats () {
     return 0;
   }
 
-
-  my $oid_in  = '';
+  my $oid_in = '';
   my $oid_out = '';
 
   if ($OID_IN) {
-    $oid_in   = $OID_IN;
+    $oid_in = $OID_IN;
     $nas_port = '';
   }
-  elsif(! $nas_port) {
+  elsif (!$nas_port) {
     print "Please specify nas port [server ip]_[serever port]";
     exit;
   }
   else {
-    $oid_in  = "interfaces.ifTable.ifEntry.ifInOctets.$nas_port";
+    $oid_in = "interfaces.ifTable.ifEntry.ifInOctets.$nas_port";
   }
 
   if ($OID_OUT) {
@@ -686,33 +733,48 @@ sub snmp_stats () {
     print "OUT: $oid_out\n";
   }
 
-  $snmp_in = `$SNMPWALK -v1 -c $community  $server $oid_in`;
-  ($inface, $a, $b, $in) = split(/ /, $snmp_in);
+  my $snmp_in = `$SNMPWALK -v1 -c $community  $server $oid_in`;
+  my (undef, undef, undef, $in) = split(/ /, $snmp_in);
 
-  my  $snmp_out = `$SNMPWALK -v1 -c $community $server $oid_out`;
-  ($inface, $a, $b, $out) = split(/ /, $snmp_out);
+  my $snmp_out = `$SNMPWALK -v1 -c $community $server $oid_out`;
+  my (undef, undef, undef, $out) = split(/ /, $snmp_out);
 
   print $in . $out . "<$server $nas_port> ";
+
+  return 1;
 }
 
 #**********************************************************
-#
+=head2 get_if($ifip)
+
+  Arguments:
+    $ifip - Interface ip
+
+  Results:
+    $ifname - Interface name
+
+=cut
 #**********************************************************
-sub get_if () {
+sub get_if {
   my $ifip = shift;
 
-  open(my $IFC, "$IFCONFIG -u |");
-    while (my $l = <$IFC>) {
-      chomp $l;
-      if ($l =~ /^([a-z]+[0-9]+):/) {
-        $curIf = $1;
-      }
-      elsif ($l =~ /$ifip/) {
-        $if = $curIf;
-      }
+  my $ifname = q{};
+
+  open(my $IFC, '-|', "$IFCONFIG -u");
+  my $curIf = q{};
+  while (my $l = <$IFC>) {
+    chomp $l;
+    if ($l =~ /^([a-z]+[0-9]+):/) {
+      $curIf = $1;
+    }
+    elsif ($l =~ /$ifip/) {
+      $ifname = $curIf;
+    }
   }
 
   close($IFC);
+
+  return $ifname;
 }
 
 #**********************************************************
@@ -725,25 +787,25 @@ sub get_if () {
 =cut
 #**********************************************************
 sub show_traf {
-  my ($if, $attr) = @_;
+  my ($if,) = @_;
 
-  my $inb     = 0;
-  my $otb     = 0;
+  my $inb = 0;
+  my $otb = 0;
   my %columns = ();
-  my @cols    = ();
+  my @cols = ();
 
-  if(! $if) {
-   print "show_traf: Interface not specified\n";
-   exit;
+  if (!$if) {
+    print "show_traf: Interface not specified\n";
+    exit;
   }
 
   if ($OS eq 'linux') {
-    if ($args->{NETSTAT})  {
-      open(my $IFS, "$NETSTAT -in |");
+    if ($args->{NETSTAT}) {
+      open(my $IFS, '-|', "$NETSTAT -in ");
       while (my $l = <$IFS>) {
         chomp $l;
         #Iface   MTU Met   RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg
-        my ($iname, $mtu, $met, $ib, $in_error, $in_dbl, $in_ovr, $ob, $out_err, $out_drp, $out_ovr) = split(" +", $l);
+        my ($iname, undef, undef, $ib, undef, undef, undef, $ob, undef) = split(" +", $l);
         if ($iname eq "$if") {
           $inb = $ib;
           $otb = $ob;
@@ -753,9 +815,9 @@ sub show_traf {
       close($IFS);
     }
     else {
-      open(my $IFS, "$IFCONFIG $if |");
+      open(my $IFS, '-|', "$IFCONFIG $if");
       while (my $l = <$IFS>) {
-      	#RX bytes:2189154956 (2.0 GiB)  TX bytes:3462971638 (3.2 GiB)
+        #RX bytes:2189154956 (2.0 GiB)  TX bytes:3462971638 (3.2 GiB)
         if ($l =~ /\s+RX bytes:(\d+)\s.+TX bytes:(\d+)/) {
           $inb = int($1);
           $otb = int($2);
@@ -766,31 +828,31 @@ sub show_traf {
   }
   else {
     $NETSTAT = "$NETSTAT -I $if -b";
-    open(my $IFS, "$NETSTAT |");
-      while (my $l = <$IFS>) {
-        chomp $l;
+    open(my $IFS, '-|', "$NETSTAT ");
+    while (my $l = <$IFS>) {
+      chomp $l;
 
-        #Name    Mtu Network       Address              Ipkts Ierrs     Ibytes    Opkts Oerrs     Obytes  Coll
-        if ($l =~ /^Name/) {
-          my @col_arr = split(/ +/, $l);
-          for (my $i = 0 ; $i < $#col_arr ; $i++) {
-            $columns{ $col_arr[$i] } = $i;
-          }
-          next;
+      #Name    Mtu Network       Address              Ipkts Ierrs     Ibytes    Opkts Oerrs     Obytes  Coll
+      if ($l =~ /^Name/) {
+        my @col_arr = split(/ +/, $l);
+        for (my $i = 0; $i < $#col_arr; $i++) {
+          $columns{ $col_arr[$i] } = $i;
         }
+        next;
+      }
 
-        @cols = split(/ +/, $l);
-        if ($cols[ $columns{'Network'} ] =~ /<Link#[0-9]+>/) {
-          if ($cols[ $columns{'Name'} ] eq 'ed0') {
-            $inb = $cols[ $columns{Opkts} ];
-            $otb = $cols[ $columns{Coll} ];
-          }
-          else {
-            $inb = $cols[ $columns{Ibytes} ];
-            $otb = $cols[ $columns{Obytes} ];
-          }
+      @cols = split(/ +/, $l);
+      if ($cols[ $columns{'Network'} ] =~ /<Link#[0-9]+>/) {
+        if ($cols[ $columns{'Name'} ] eq 'ed0') {
+          $inb = $cols[ $columns{Opkts} ];
+          $otb = $cols[ $columns{Coll} ];
+        }
+        else {
+          $inb = $cols[ $columns{Ibytes} ];
+          $otb = $cols[ $columns{Obytes} ];
         }
       }
+    }
     close($IFS);
   }
 
@@ -824,7 +886,15 @@ sub parse_arguments {
 }
 
 #*******************************************************************
-# Freeradius
+=head2 radius($choise) - Freeradius
+
+  Arguments:
+    $choise
+
+  Results:
+
+
+=cut
 #*******************************************************************
 sub radius {
   my ($choise) = @_;
@@ -832,8 +902,8 @@ sub radius {
   my %parsed = ();
   my $RADCLIENT = `which radclient`;
   chomp $RADCLIENT;
-  if (! $RADCLIENT) {
-    $RADCLIENT='/usr/local/freeradius/bin/radclient';
+  if (!$RADCLIENT) {
+    $RADCLIENT = '/usr/local/freeradius/bin/radclient';
   }
 
   my $cmd = qq{echo "Message-Authenticator = 0x00, FreeRADIUS-Statistics-Type = 3, Response-Packet-Type = Access-Accept" | $RADCLIENT -r 1 -x 127.0.0.1:18121 status adminsecret};
@@ -845,33 +915,34 @@ sub radius {
   my @acct = ("Accounting-Requests", "Accounting-Responses");
 
   foreach my $line (@line_array) {
-    my ($requests, $value) ;
-    if ( ($requests, $value) = $line =~ /FreeRADIUS\-Total\-(.*) = (.*)$/){
-      print " $requests - $value\n" if ($debug);
-      $parsed{$requests} = $value;
+    my ($requests, $request_value);
+    if (($requests, $request_value) = $line =~ /FreeRADIUS\-Total\-(.*) = (.*)$/) {
+      print " $requests - $request_value\n" if ($debug);
+      $parsed{$requests} = $request_value;
     }
   }
 
-  if($choise eq "access"){
-    foreach my $key (@access){
-      print( (($parsed{$key}) ? $parsed{$key} :  0)."\n");
+  if ($choise eq "access") {
+    foreach my $key (@access) {
+      print((($parsed{$key}) ? $parsed{$key} : 0) . "\n");
     }
   }
-  elsif ($choise eq "auth"){
-    foreach my $key (@auth){
-      print(($parsed{$key} || 0)."\n");
+  elsif ($choise eq "auth") {
+    foreach my $key (@auth) {
+      print(($parsed{$key} || 0) . "\n");
     }
   }
-  elsif ($choise eq "acct"){
-    foreach my $key (@acct){
-      print(($parsed{$key} || 0)."\n");
+  elsif ($choise eq "acct") {
+    foreach my $key (@acct) {
+      print(($parsed{$key} || 0) . "\n");
     }
   }
-  elsif($choise =~ /(.+):(.+)/ ) {
-    print(($parsed{$1} || 0)."\n".($parsed{$2} || 0)."\n");
+  elsif ($choise =~ /(.+):(.+)/) {
+    print(($parsed{$1} || 0) . "\n" . ($parsed{$2} || 0) . "\n");
   }
 
   return 1
 }
+
 
 1;

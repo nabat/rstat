@@ -9,7 +9,7 @@
 
 =head1 VERSION
 
-  Version: 0.30
+  Version: 0.31
 
 =head1 Author
 
@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 # Variables
-my $version = '0.30';
+my $version = '0.31';
 
 my $NETSTAT = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -42,7 +42,7 @@ chop($NETSTAT);
 chop($SNMPWALK);
 
 if ($#ARGV > -1) {
-  $type  = $ARGV[0];
+  $type = $ARGV[0];
   $value = $ARGV[1];
 }
 else {
@@ -488,13 +488,20 @@ sub mysql_queries {
 =cut
 #**********************************************************
 sub user_db_count {
+
   my $mysql_user = (($config{mysql_user}) ? $config{mysql_user} : '');
   my $mysql_password = (($config{mysql_password}) ? $config{mysql_password} : '');
   my $mysql_host = (($config{mysql_host}) ? $config{mysql_host} : 'localhost');
   my $mysql_port = (($config{mysql_port}) ? $config{mysql_port} : '3306');
   my $mysql_base = (($config{mysql_base}) ? $config{mysql_base} : '');
+  my $mysql_cmd = (($config{mysql_cmd}) ? $config{mysql_cmd} : 'mysql');
 
-  my $cmd = "mysql -D $mysql_base -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password -e 'SELECT count(*) FROM internet_online WHERE ((status=1 or status>=3) and status<11)'";
+  my $cmd = "$mysql_cmd -D $mysql_base -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password "
+    ."-e 'SELECT SUM(IF (status=1 or status>=3, 1, 0)) AS online, SUM(IF (status=2, 1, 0)) AS zaped FROM internet_online;' 2> /dev/null";
+
+  if($debug > 1) {
+    print "$cmd\n";
+  }
 
   my $mysqladmin_output = '';
   if (open(my $MYSQLA, '-|', "$cmd")) {
@@ -506,9 +513,22 @@ sub user_db_count {
   }
 
   $mysqladmin_output =~ s/count\(\*\)\n\r?//;
+  $mysqladmin_output =~ s/count.*\n\r?//;
 
-  print $mysqladmin_output;
-  print $mysqladmin_output;
+  my @rows = split(/\n\r?/, $mysqladmin_output);
+  my $online = 0;
+  my $zap = 0;
+
+  foreach my $row (@rows) {
+    if($row =~ /(\d+)\s(\d+)/) {
+      $online = $1;
+      $zap = $2;
+    }
+  }
+
+  print "$zap\n$online\n";
+
+  return 1;
 }
 
 #**********************************************************
@@ -588,7 +608,7 @@ sub if_count {
   my $res = '';
   my $count = 0;
 
-  if($attr && $attr->{ipoe}) {
+  if ($attr && $attr->{ipoe}) {
     my $cmd = "/bin/cat /proc/net/dev |/bin/grep ipoe |/usr/bin/wc -l";
     $count = `$cmd`;
     chomp($count);
@@ -630,7 +650,6 @@ sub ipfw_stats {
     print $f[2], "\n";
   }
   close($PROG);
-
 
 }
 

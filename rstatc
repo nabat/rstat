@@ -31,7 +31,6 @@ my $remote = IO::Socket::INET->new(
   PeerPort => $rstats_port)
   or die "cannot connect to rmstats port at $ARGV[0]:$rstats_port $!\n";
 
-$debug=1;
 if ($debug) {
   print "== REQUEST ======================\n";
   print 'Host: '. $ARGV[0]  ."\n";

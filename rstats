@@ -9,7 +9,7 @@
 
 =head1 VERSION
 
-  Version: 0.31
+  Version: 0.33
 
 =head1 Author
 
@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 # Variables
-my $version = '0.31';
+my $version = '0.33';
 
 my $NETSTAT = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -952,13 +952,14 @@ sub radius {
   my ($choise) = @_;
 
   my %parsed = ();
+  my $radius_host = $config{radius_host} || '127.0.0.1';
   my $RADCLIENT = `which radclient`;
   chomp $RADCLIENT;
   if (!$RADCLIENT) {
     $RADCLIENT = '/usr/local/freeradius/bin/radclient';
   }
 
-  my $cmd = qq{echo "Message-Authenticator = 0x00, FreeRADIUS-Statistics-Type = 3, Response-Packet-Type = Access-Accept" | $RADCLIENT -r 1 -x 127.0.0.1:18121 status adminsecret};
+  my $cmd = qq{echo "Message-Authenticator = 0x00, FreeRADIUS-Statistics-Type = 3, Response-Packet-Type = Access-Accept" | $RADCLIENT -r 1 -x $radius_host:18121 status adminsecret};
   my $info = `$cmd`;
   my @line_array = split("\n", $info);
 

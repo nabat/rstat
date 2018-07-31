@@ -42,13 +42,14 @@ chop($NETSTAT);
 chop($SNMPWALK);
 
 if ($#ARGV > -1) {
-  $type = $ARGV[0];
+  $type  = $ARGV[0];
   $value = $ARGV[1];
 }
 else {
   my $params = <>;
   chop($params);
-  ($type, $value) = split(/ /, $params);
+  ($type, $value, @ARGV) = split(/ /, $params);
+  @ARGV = ($value, @ARGV);
 }
 
 $type //= q{};

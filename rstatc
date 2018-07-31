@@ -18,6 +18,7 @@ use warnings;
 
 use IO::Socket;
 my $rstats_port = 30003;
+my $debug = 0;
 
 if ($#ARGV<1) {
   print "rmstatc host [type] [params]\n";
@@ -30,8 +31,22 @@ my $remote = IO::Socket::INET->new(
   PeerPort => $rstats_port)
   or die "cannot connect to rmstats port at $ARGV[0]:$rstats_port $!\n";
 
+$debug=1;
+if ($debug) {
+  print "== REQUEST ======================\n";
+  print 'Host: '. $ARGV[0]  ."\n";
+  print 'Command: '. $ARGV[1] ."\n";
+  print 'Arguments: ' . join(' ', @ARGV[ 2..$#ARGV ]);
+  print "\n";
+  print "=================================\n";
+}
+
 #print "$ARGV[1] $ARGV[2]\n";
-print $remote "$ARGV[1] $ARGV[2]\n";
+print $remote $ARGV[1].' ';
+if($#ARGV > 1) {
+  print $remote join(' ', @ARGV[2 .. $#ARGV]);
+}
+print $remote "\n";
 
 while (<$remote>) {
   print;

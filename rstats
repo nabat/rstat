@@ -923,8 +923,9 @@ sub show_traf {
 }
 
 #*******************************************************************
-# Parse comand line arguments
-# parse_arguments(@$argv)
+=head2 parse_arguments(@$argv) - Parse comand line arguments
+
+=cut
 #*******************************************************************
 sub parse_arguments {
   my ($argv) = @_;
@@ -932,6 +933,9 @@ sub parse_arguments {
   my %args = ();
 
   foreach my $line (@$argv) {
+    if(! $line) {
+      next;
+    }
     if ($line =~ /=/) {
       my ($k, $v) = split(/=/, $line, 2);
       $args{"$k"} = (defined($v)) ? $v : '';

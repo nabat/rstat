@@ -9,7 +9,7 @@
 
 =head1 VERSION
 
-  Version: 0.33
+  Version: 0.34
 
 =head1 Author
 
@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 # Variables
-my $version = '0.33';
+my $version = '0.34';
 
 my $NETSTAT = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -125,6 +125,7 @@ Version: $version
   tun_count  - Get active tun interface
   load       - System load
   mysql      - Mysql Query and Slow Query
+
   memory     - FreeBSD memory
   memnocache - FreeBSD/Linux memory cache
   swap       - FreeBSD Swap info
@@ -136,6 +137,11 @@ Version: $version
   mikrotik_mem - Mikrotik memmory
     REMOTE_USER=
     REMOTE_CERT=
+  radius
+    access
+    auth
+    acct
+      radius_host=10.10.10.1
 
   os=(linux|freebsd) - select OS freebsd or linux. Default freebsd
   debug      - Debug mode
@@ -953,13 +959,16 @@ sub radius {
 
   my %parsed = ();
   my $radius_host = $config{radius_host} || '127.0.0.1';
+  my $radius_secret = $config{radius_host} || 'adminsecret';
   my $RADCLIENT = `which radclient`;
+
   chomp $RADCLIENT;
+
   if (!$RADCLIENT) {
     $RADCLIENT = '/usr/local/freeradius/bin/radclient';
   }
 
-  my $cmd = qq{echo "Message-Authenticator = 0x00, FreeRADIUS-Statistics-Type = 3, Response-Packet-Type = Access-Accept" | $RADCLIENT -r 1 -x $radius_host:18121 status adminsecret};
+  my $cmd = qq{echo "Message-Authenticator = 0x00, FreeRADIUS-Statistics-Type = 3, Response-Packet-Type = Access-Accept" | $RADCLIENT -r 1 -x $radius_host:18121 status $radius_secret};
   my $info = `$cmd`;
   my @line_array = split("\n", $info);
 

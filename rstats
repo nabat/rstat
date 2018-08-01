@@ -959,7 +959,7 @@ sub radius {
 
   my %parsed = ();
   my $radius_host = $config{radius_host} || '127.0.0.1';
-  my $radius_secret = $config{radius_host} || 'adminsecret';
+  my $radius_secret = $config{radius_secret} || 'adminsecret';
   my $RADCLIENT = `which radclient`;
 
   chomp $RADCLIENT;
@@ -969,6 +969,11 @@ sub radius {
   }
 
   my $cmd = qq{echo "Message-Authenticator = 0x00, FreeRADIUS-Statistics-Type = 3, Response-Packet-Type = Access-Accept" | $RADCLIENT -r 1 -x $radius_host:18121 status $radius_secret};
+
+  if($debug > 2) {
+    print "CMD: $cmd\n";
+  }
+
   my $info = `$cmd`;
   my @line_array = split("\n", $info);
 

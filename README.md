@@ -40,6 +40,9 @@ Futures
 
   mikrotik_mem - Mikrotik memmory
 
+  radius - monitoring radius request
+  
+  
 
 
 =================================================

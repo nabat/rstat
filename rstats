@@ -97,12 +97,27 @@ elsif ($type eq 'memnocache') {&memnocache();}
 elsif ($type eq 'tuns_traf') {&tuns_traf();}
 elsif ($type eq 'swap') {&swap_info();}
 elsif ($type eq 'help') {&help();}
+elsif ($type eq 'temp') {&temp();}
 
 if ($footer eq '') {
   print `uptime`;
 }
 else {
   print $footer;
+}
+
+#**********************************************************
+=head2 temp
+
+=cut
+#**********************************************************
+sub temp {
+  my %sysctl = ();
+  my (undef, $cpu0temp) = split(/ /, `sysctl dev.cpu.0.temperature`);
+  my (undef, $cpu1temp) = split(/ /, `sysctl dev.cpu.1.temperature`);
+  $data  = $cpu0temp;
+  $data1 = $cpu1temp;
+  print "$data$data1";
 }
 
 #**********************************************************

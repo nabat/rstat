@@ -97,12 +97,28 @@ elsif ($type eq 'memnocache') {&memnocache();}
 elsif ($type eq 'tuns_traf') {&tuns_traf();}
 elsif ($type eq 'swap') {&swap_info();}
 elsif ($type eq 'help') {&help();}
+elsif ($type eq 'temp') {&temp();}
 
 if ($footer eq '') {
   print `uptime`;
 }
 else {
   print $footer;
+}
+
+#**********************************************************
+=head2 temp
+
+=cut
+#**********************************************************
+sub temp {
+  my %sysctl = ();
+  my (undef, $cpu0temp) = split(/ /, `sysctl dev.cpu.0.temperature`);
+  my (undef, $cpu1temp) = split(/ /, `sysctl dev.cpu.1.temperature`);
+  $data  = $cpu0temp;
+  $data1 = $cpu1temp;
+  print "$data$data1";
+  return 1;
 }
 
 #**********************************************************
@@ -182,6 +198,7 @@ sub mikrotik_ppp {
   my $result = `$cmd`;
 
   print $result . "0\n";
+  return 1;
 }
 
 #**********************************************************
@@ -207,7 +224,7 @@ sub mikrotik_mem {
 }
 
 #**********************************************************
-=head2 mikrotik_mem()
+=head2 mikrotik_load()
 
 =cut
 #**********************************************************
@@ -219,12 +236,14 @@ sub mikrotik_load {
     #IN  => '.1.3.6.1.2.1.25.3.3.1.2.1', #'.1.3.6.1.4.1.14988.1.1.3.14.0',
     #OUT => '.1.3.6.1.2.1.25.3.3.1.2.1', #'.1.3.6.1.4.1.14988.1.1.3.14.0'
   });
-
+  return 1;
 }
 
 
 #**********************************************************
-# Swap info
+=head2 swap_info()
+  Swap info
+=cut
 #**********************************************************
 sub swap_info {
   my $info = '';
@@ -239,6 +258,7 @@ sub swap_info {
   my ($available, $used) = split(/ /, $info);
 
   print "$available\n$used";
+  return 1;
 }
 
 #**********************************************************
@@ -270,6 +290,7 @@ sub tuns_traf {
   close($IFC);
 
   print "$total_in\n$total_out\n";
+  return 1;
 }
 
 #*******************************************
@@ -374,6 +395,7 @@ sub memnocache {
   }
 
   print "$data\n$data1\n";
+  return 1;
 }
 
 #**********************************************************
@@ -486,7 +508,7 @@ sub mysql_queries {
 
   $footer = "$mysql_uptime $mysql_version\n";
   print "$questions\n$slow_queries\n";
-
+  return 1;
 }
 
 #**********************************************************
@@ -598,6 +620,7 @@ sub load {
   }
 
   print "$data\n$data1\n";
+  return 1;
 }
 
 #**********************************************************
@@ -657,7 +680,7 @@ sub ipfw_stats {
     print $f[2], "\n";
   }
   close($PROG);
-
+  return 1;
 }
 
 #**********************************************************
@@ -718,6 +741,7 @@ sub iptables_stats {
   $otb = $otb + 0;
 
   print "$inb\n$otb\n<__> ";
+  return 1;
 }
 
 #**********************************************************

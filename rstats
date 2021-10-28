@@ -9,11 +9,11 @@
 
 =head1 VERSION
 
-  Version: 0.34
+  Version: 0.36
 
 =head1 Author
 
- ~AsmodeuS~ (2007-2018) mailto:asm [at] abills.net.ua
+ ~AsmodeuS~ (2007-2021) mailto:asm [at] abills.net.ua
 
 =cut
 
@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 # Variables
-my $version = '0.34';
+my $version = '0.36';
 
 my $NETSTAT = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -526,7 +526,7 @@ sub user_db_count {
   my $mysql_cmd = (($config{mysql_cmd}) ? $config{mysql_cmd} : 'mysql');
 
   my $cmd = "$mysql_cmd -D $mysql_base -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password "
-    ."-e 'SELECT SUM(IF((c.status=1 OR c.status>=3) AND c.status<11, 1, 0)) AS online, SUM(IF (status=2, 1, 0)) AS zaped FROM internet_online;' 2> /dev/null";
+    ."-e 'SELECT SUM(IF((status=1 OR status>=3) AND status<11, 1, 0)) AS online, SUM(IF (status=2, 1, 0)) AS zaped FROM internet_online;' 2> /dev/null";
 
   if($debug > 1) {
     print "$cmd\n";

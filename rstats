@@ -9,11 +9,11 @@
 
 =head1 VERSION
 
-  Version: 0.36
+  Version: 0.37
 
 =head1 Author
 
- ~AsmodeuS~ (2007-2021) mailto:asm [at] abills.net.ua
+ ~AsmodeuS~ (2007-2024) mailto:asm [at] abills.net.ua
 
 =cut
 
@@ -98,6 +98,7 @@ elsif ($type eq 'tuns_traf') {&tuns_traf();}
 elsif ($type eq 'swap') {&swap_info();}
 elsif ($type eq 'help') {&help();}
 elsif ($type eq 'temp') {&temp();}
+elsif ($type eq 'mysql_noindex') { mysql_noindex(); }
 
 if ($footer eq '') {
   print `uptime`;
@@ -1037,6 +1038,58 @@ sub radius {
   }
 
   return 1
+}
+
+
+#**********************************************************
+=head2 mysql_noindex() -  count of users on system
+
+=cut
+#**********************************************************
+sub mysql_noindex {
+
+  my $mysql_user = (($config{mysql_user}) ? $config{mysql_user} : 'root');
+  my $mysql_password = (($config{mysql_password}) ? $config{mysql_password} : '');
+  my $mysql_host = (($config{mysql_host}) ? $config{mysql_host} : 'localhost');
+  my $mysql_port = (($config{mysql_port}) ? $config{mysql_port} : '3306');
+  my $mysql_base = (($config{mysql_base}) ? $config{mysql_base} : '');
+  my $mysql_cmd = (($config{mysql_cmd}) ? $config{mysql_cmd} : 'mysql');
+
+  my $cmd = "$mysql_cmd -D '$mysql_base' -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password "
+    ."-e 'show GLOBAL STATUS like  \"Select_range_check\"; show GLOBAL STATUS like \"Select_full_join\";' 2> /dev/null";
+
+  if($debug > 1) {
+    print "$cmd\n";
+  }
+
+  my $mysqladmin_output = '';
+  if (open(my $MYSQLA, '-|', "$cmd")) {
+    $mysqladmin_output = join('', <$MYSQLA>);
+    close $MYSQLA;
+  }
+  else {
+    print STDERR "${$cmd}: ERROR: Can't open $cmd: $!";
+  }
+
+  #  $mysqladmin_output =~ s/count\(\*\)\n\r?//;
+  #$mysqladmin_output =~ s/count.*\n\r?//;
+
+  my @rows = split(/\n\r?/, $mysqladmin_output);
+  my $Select_range_check = 0;
+  my $Select_full_join = 0;
+
+  foreach my $row (@rows) {
+    if($row =~ /Select_range_check\s+(\d+)/) {
+      $Select_range_check = $1;
+    }
+    elsif($row =~ /Select_full_join\s+(\d+)/) {
+      $Select_full_join = $1;	    
+    }
+  }
+
+  print "$Select_range_check\n$Select_full_join\n";
+
+  return 1;
 }
 
 

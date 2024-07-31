@@ -1153,8 +1153,9 @@ sub apache_servers {
     $idle_servers = $1;
   }
   
+  my $total = $busy_servers + $idle_servers;
 
-  print "$busy_servers\n$idle_servers\n";
+  print "$busy_servers\n$total\n";
 
   return 1;
 }

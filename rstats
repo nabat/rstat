@@ -99,6 +99,7 @@ elsif ($type eq 'swap') {&swap_info();}
 elsif ($type eq 'help') {&help();}
 elsif ($type eq 'temp') {&temp();}
 elsif ($type eq 'mysql_noindex') { mysql_noindex(); }
+elsif ($type eq 'apache') { apache();  }
 
 if ($footer eq '') {
   print `uptime`;
@@ -1091,6 +1092,35 @@ sub mysql_noindex {
 
   return 1;
 }
+
+
+#**********************************************************
+=head2 apache
+
+=cut
+#**********************************************************
+sub apache {
+
+  my $CURL = 'curl';
+  my $host = '127.0.0.1';
+  my $getinfo_request = qq{$CURL -s -L http://$host/server-status | grep 'Total accesses'};
+
+  if ($debug) {
+    print $getinfo_request."\n";
+  }
+
+  my $result = `$getinfo_request`;
+  my $requests = 0;
+  
+  if ($result =~ /Total accesses:\s+(\d+)\s/) {
+    $requests = $1;
+  }
+
+  print "$requests\n$requests\n";
+
+  return 1;
+}
+
 
 
 1;

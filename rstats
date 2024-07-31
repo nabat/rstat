@@ -100,6 +100,9 @@ elsif ($type eq 'help') {&help();}
 elsif ($type eq 'temp') {&temp();}
 elsif ($type eq 'mysql_noindex') { mysql_noindex(); }
 elsif ($type eq 'apache') { apache();  }
+elsif ($type eq 'apache_servers') { apache_servers(); }
+
+
 
 if ($footer eq '') {
   print `uptime`;
@@ -1117,6 +1120,41 @@ sub apache {
   }
 
   print "$requests\n$requests\n";
+
+  return 1;
+}
+
+
+#**********************************************************
+=head2 apache_servers
+
+=cut
+#**********************************************************
+sub apache_servers {
+
+  my $CURL = 'curl';
+  my $host = '127.0.0.1';
+  my $getinfo_request = qq{$CURL -s -L http://$host/server-status?auto};
+
+  if ($debug) {
+    print $getinfo_request."\n";
+  }
+
+  my $result = `$getinfo_request`;
+  my $busy_servers = 0;
+  my $idle_servers = 0;
+
+  if ($result =~ /.*BusyWorkers: (\d+)/) {
+    $busy_servers = $1;
+  }
+
+
+  if ($result =~ /.*IdleWorkers: (\d+)/) {
+    $idle_servers = $1;
+  }
+  
+
+  print "$busy_servers\n$idle_servers\n";
 
   return 1;
 }

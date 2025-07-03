@@ -9,11 +9,11 @@
 
 =head1 VERSION
 
-  Version: 0.37
+  Version: 0.39
 
 =head1 Author
 
- ~AsmodeuS~ (2007-2024) mailto:asm [at] abills.net.ua
+ ~AsmodeuS~ (2007-2025) mailto:asm [at] abills.net.ua
 
 =cut
 
@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 # Variables
-my $version = '0.36';
+my $version = '0.39';
 
 my $NETSTAT = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -48,7 +48,7 @@ if ($#ARGV > -1) {
 else {
   my $params = <>;
   chop($params);
-  ($type, $value, @ARGV) = split(/ /, $params);
+  ($type, $value, @ARGV) = split(/\s+/x, $params);
   @ARGV = ($value, @ARGV);
 }
 
@@ -871,6 +871,9 @@ sub get_if {
     $if
     $attr
 
+  Returns:
+    in out uptime
+
 =cut
 #**********************************************************
 sub show_traf {
@@ -892,7 +895,9 @@ sub show_traf {
       while (my $l = <$IFS>) {
         chomp $l;
         #Iface   MTU Met   RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg
-        my ($iname, undef, undef, $ib, undef, undef, undef, $ob, undef) = split(" +", $l);
+        #my ($iname, undef, undef, $ib, undef, undef, undef, $ob, undef) = split(/\s+/x, $l);
+        
+        my ($iname, undef, $ib, undef, undef, undef, $ob, undef) = split(/\s+/x, $l);
         if ($iname eq "$if") {
           $inb = $ib;
           $otb = $ob;
@@ -905,7 +910,7 @@ sub show_traf {
       open(my $IFS, '-|', "$IFCONFIG $if");
       while (my $l = <$IFS>) {
         #RX bytes:2189154956 (2.0 GiB)  TX bytes:3462971638 (3.2 GiB)
-        if ($l =~ /\s+RX bytes:(\d+)\s.+TX bytes:(\d+)/) {
+        if ($l =~ m/\s+RX\s+bytes:(\d+)\s.+TX\s+bytes:(\d+)/x) {
           $inb = int($1);
           $otb = int($2);
         }
@@ -920,8 +925,8 @@ sub show_traf {
       chomp $l;
 
       #Name    Mtu Network       Address              Ipkts Ierrs     Ibytes    Opkts Oerrs     Obytes  Coll
-      if ($l =~ /^Name/) {
-        my @col_arr = split(/ +/, $l);
+      if ($l =~ m/^Name/x) {
+        my @col_arr = split(/\s+/x, $l);
         for (my $i = 0; $i < $#col_arr; $i++) {
           $columns{ $col_arr[$i] } = $i;
         }
@@ -1098,7 +1103,7 @@ sub mysql_noindex {
 
 
 #**********************************************************
-=head2 apache
+=head2 apache()
 
 =cut
 #**********************************************************
@@ -1106,7 +1111,8 @@ sub apache {
 
   my $CURL = 'curl';
   my $host = '127.0.0.1';
-  my $getinfo_request = qq{$CURL -s -L http://$host/server-status | grep 'Total accesses'};
+  my $point = $args->{POINT} || 'server-status';
+  my $getinfo_request = qq{$CURL -s -L http://$host/$point | grep 'Total accesses'};
 
   if ($debug) {
     print $getinfo_request."\n";
@@ -1115,7 +1121,7 @@ sub apache {
   my $result = `$getinfo_request`;
   my $requests = 0;
   
-  if ($result =~ /Total accesses:\s+(\d+)\s/) {
+  if ($result =~ m/Total\s+accesses:\s+(\d+)\s/x) {
     $requests = $1;
   }
 
@@ -1134,7 +1140,8 @@ sub apache_servers {
 
   my $CURL = 'curl';
   my $host = '127.0.0.1';
-  my $getinfo_request = qq{$CURL -s -L http://$host/server-status?auto};
+  my $point = $args->{POINT} || 'server-status';
+  my $getinfo_request = qq{$CURL -s -L http://$host/$point?auto};
 
   if ($debug) {
     print $getinfo_request."\n";
@@ -1144,12 +1151,12 @@ sub apache_servers {
   my $busy_servers = 0;
   my $idle_servers = 0;
 
-  if ($result =~ /.*BusyWorkers: (\d+)/) {
+  if ($result =~ m/.*BusyWorkers:\s+(\d+)/x) {
     $busy_servers = $1;
   }
 
 
-  if ($result =~ /.*IdleWorkers: (\d+)/) {
+  if ($result =~ m/.*IdleWorkers:\s+(\d+)/x) {
     $idle_servers = $1;
   }
   

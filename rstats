@@ -9,7 +9,7 @@
 
 =head1 VERSION
 
-  Version: 0.39
+  Version: 0.40
 
 =head1 Author
 
@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 # Variables
-my $version = '0.39';
+my $version = '0.40';
 
 my $NETSTAT = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -99,8 +99,8 @@ elsif ($type eq 'swap') {&swap_info();}
 elsif ($type eq 'help') {&help();}
 elsif ($type eq 'temp') {&temp();}
 elsif ($type eq 'mysql_noindex') { mysql_noindex(); }
-elsif ($type eq 'apache') { apache();  }
-elsif ($type eq 'apache_servers') { apache_servers(); }
+elsif ($type eq 'apache') { apache($args);  }
+elsif ($type eq 'apache_servers') { apache_servers($args); }
 
 
 
@@ -112,7 +112,7 @@ else {
 }
 
 #**********************************************************
-=head2 temp
+=head2 temp() - Temperature
 
 =cut
 #**********************************************************
@@ -1103,15 +1103,22 @@ sub mysql_noindex {
 
 
 #**********************************************************
-=head2 apache()
+=head2 apache($attr)
+
+Arguments:
+  $attr
+
+Results:
+  
 
 =cut
 #**********************************************************
 sub apache {
+  my ($attr)=@_;
 
   my $CURL = 'curl';
-  my $host = '127.0.0.1';
-  my $point = $args->{POINT} || 'server-status';
+  my $host = $attr->{HOST} || '127.0.0.1';
+  my $point = $attr->{POINT} || 'server-status';
   my $getinfo_request = qq{$CURL -s -L http://$host/$point | grep 'Total accesses'};
 
   if ($debug) {
@@ -1132,15 +1139,21 @@ sub apache {
 
 
 #**********************************************************
-=head2 apache_servers
+=head2 apache_servers($attr)
 
+Arguments:
+  $attr
+
+Results:
+  
 =cut
 #**********************************************************
 sub apache_servers {
-
+  my ($attr) = @_;
+  
   my $CURL = 'curl';
-  my $host = '127.0.0.1';
-  my $point = $args->{POINT} || 'server-status';
+  my $host = $attr->{HOST} || '127.0.0.1';
+  my $point = $attr->{POINT} || 'server-status';
   my $getinfo_request = qq{$CURL -s -L http://$host/$point?auto};
 
   if ($debug) {
@@ -1154,7 +1167,6 @@ sub apache_servers {
   if ($result =~ m/.*BusyWorkers:\s+(\d+)/x) {
     $busy_servers = $1;
   }
-
 
   if ($result =~ m/.*IdleWorkers:\s+(\d+)/x) {
     $idle_servers = $1;

@@ -9,11 +9,11 @@
 
 =head1 VERSION
 
-  Version: 0.40
+  Version: 0.41
 
 =head1 Author
 
- ~AsmodeuS~ (2007-2025) mailto:asm [at] abills.net.ua
+ ~AsmodeuS~ (2007-2026) mailto:asm [at] abills.net.ua
 
 =cut
 
@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 # Variables
-my $version = '0.40';
+my $version = '0.41';
 
 my $NETSTAT = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -246,23 +246,24 @@ sub mikrotik_load {
 
 
 #**********************************************************
-=head2 swap_info()
-  Swap info
+=head2 swap_info() - Swap info
 =cut
 #**********************************************************
 sub swap_info {
   my $info = '';
 
   if ($OS eq 'linux') {
-    $info = `/sbin/swapon -s |/usr/bin/tail -1 |/bin/awk '{print $4"\n" $3}'`;
+    my $cmd = q(/sbin/swapon -s |/usr/bin/tail -1 |/bin/awk '{print $4"\n" $3}');
+    $info = `$cmd`;
   }
   else {
     $info = `/usr/sbin/swapinfo | tail -1 | awk '{ print \$4*\$2" "\$3*\$2 }'`;
   }
 
-  my ($available, $used) = split(/ /, $info);
+  my ($available, $used) = split(/\s+|\n/, $info);
 
-  print "$available\n$used";
+  print "$available\n$used\n";
+
   return 1;
 }
 

@@ -9,7 +9,7 @@
 
 =head1 VERSION
 
-  Version: 0.41
+  Version: 0.42
 
 =head1 Author
 
@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 # Variables
-my $version = '0.41';
+my $version = '0.42';
 
 my $NETSTAT = `which netstat` || '/usr/bin/netstat';
 my $IPTABLES = '/usr/local/sbin/iptables';
@@ -92,6 +92,7 @@ elsif ($type eq 'ipoe_count') {&if_count({ ipoe => 1 });}
 elsif ($type eq 'load') {&load();}
 elsif ($type eq 'mysql') {&mysql_queries();}
 elsif ($type eq 'user_db_count') {&user_db_count();}
+elsif ($type eq 'user_guest_count') {&user_guest_count();}
 elsif ($type eq 'memory') {&memory();}
 elsif ($type eq 'memnocache') {&memnocache();}
 elsif ($type eq 'tuns_traf') {&tuns_traf();}
@@ -565,6 +566,56 @@ sub user_db_count {
 
   return 1;
 }
+
+#**********************************************************
+=head2 user_guest_count() -  count of users on system
+
+=cut
+#**********************************************************
+sub user_guest_count {
+
+  my $mysql_user = (($config{mysql_user}) ? $config{mysql_user} : '');
+  my $mysql_password = (($config{mysql_password}) ? $config{mysql_password} : '');
+  my $mysql_host = (($config{mysql_host}) ? $config{mysql_host} : 'localhost');
+  my $mysql_port = (($config{mysql_port}) ? $config{mysql_port} : '3306');
+  my $mysql_base = (($config{mysql_base}) ? $config{mysql_base} : '');
+  my $mysql_cmd = (($config{mysql_cmd}) ? $config{mysql_cmd} : 'mysql');
+
+  my $cmd = "$mysql_cmd -D $mysql_base -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password "
+    ."-e 'SELECT SUM(IF((status=1 OR status>=3) AND status<11, 1, 0)) AS guest, SUM(IF (uid=0, 1, 0)) AS unknown FROM internet_online WHERE guest > 0;' 2> /dev/null";
+
+  if($debug > 1) {
+    print "$cmd\n";
+  }
+
+  my $mysqladmin_output = '';
+  if (open(my $MYSQLA, '-|', "$cmd")) {
+    $mysqladmin_output = join('', <$MYSQLA>);
+    close $MYSQLA;
+  }
+  else {
+    print STDERR "${$cmd}: ERROR: Can't open $cmd: $!";
+  }
+
+  $mysqladmin_output =~ s/count\(\*\)\n\r?//;
+  $mysqladmin_output =~ s/count.*\n\r?//;
+
+  my @rows = split(/\n\r?/, $mysqladmin_output);
+  my $online = 0;
+  my $zap = 0;
+
+  foreach my $row (@rows) {
+    if($row =~ /(\d+)\s(\d+)/) {
+      $online = $1;
+      $zap = $2;
+    }
+  }
+
+  print "$zap\n$online\n";
+
+  return 1;
+}
+
 
 #**********************************************************
 =head2 read_config($configfile)  Load date from config

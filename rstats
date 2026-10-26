@@ -9,7 +9,7 @@
 
 =head1 VERSION
 
-  Version: 0.42
+  Version: 0.44
 
 =head1 Author
 
@@ -91,7 +91,7 @@ elsif ($type eq 'ppp_count') {&if_count();}
 elsif ($type eq 'ipoe_count') {&if_count({ ipoe => 1 });}
 elsif ($type eq 'load') {&load();}
 elsif ($type eq 'mysql') {&mysql_queries();}
-elsif ($type eq 'user_db_count') {&user_db_count();}
+elsif ($type eq 'user_db_count') {&user_db_count($args);}
 elsif ($type eq 'user_guest_count') {&user_guest_count();}
 elsif ($type eq 'memory') {&memory();}
 elsif ($type eq 'memnocache') {&memnocache();}
@@ -102,6 +102,7 @@ elsif ($type eq 'temp') {&temp();}
 elsif ($type eq 'mysql_noindex') { mysql_noindex(); }
 elsif ($type eq 'apache') { apache($args);  }
 elsif ($type eq 'apache_servers') { apache_servers($args); }
+elsif ($type eq 'disc_io') { disc_io($value); }
 
 
 
@@ -519,11 +520,16 @@ sub mysql_queries {
 }
 
 #**********************************************************
-=head2 user_db_count() -  count of users on system
+=head2 user_db_count($attr -  count of users on system
+
+  Arguments:
+    $attr
+  Results:
 
 =cut
 #**********************************************************
 sub user_db_count {
+  my ($attr)=@_;
 
   my $mysql_user = (($config{mysql_user}) ? $config{mysql_user} : '');
   my $mysql_password = (($config{mysql_password}) ? $config{mysql_password} : '');
@@ -532,12 +538,16 @@ sub user_db_count {
   my $mysql_base = (($config{mysql_base}) ? $config{mysql_base} : '');
   my $mysql_cmd = (($config{mysql_cmd}) ? $config{mysql_cmd} : 'mysql');
 
+  my $sql_query = << 'SQL';
+SELECT SUM(IF((status=1 OR status>=3) AND status<11, 1, 0)) AS online,
+       SUM(IF (status=2, 1, 0)) AS zaped,
+       SUM(IF (guest>0 AND uid>0, 1, 0)) AS guest,
+       SUM(IF (uid=0, 1, 0)) AS unknown
+FROM internet_online;
+SQL
+
   my $cmd = "$mysql_cmd -D $mysql_base -h $mysql_host -P $mysql_port -u $mysql_user -p$mysql_password "
-    ."-e 'SELECT SUM(IF((status=1 OR status>=3) AND status<11, 1, 0)) AS online,
-    SUM(IF (status=2, 1, 0)) AS zaped,
-    SUM(IF (guest>0 AND uid>0, 1, 0)) AS guest,
-    SUM(IF (uid=0, 1, 0)) AS unknown
-    FROM internet_online;' 2> /dev/null";
+    ."-e '$sql_query' 2> /dev/null";
 
   if($debug > 1) {
     print "$cmd\n";
@@ -552,25 +562,30 @@ sub user_db_count {
     print STDERR "${$cmd}: ERROR: Can't open $cmd: $!";
   }
 
-  $mysqladmin_output =~ s/count\(\*\)\n\r?//;
-  $mysqladmin_output =~ s/count.*\n\r?//;
+  $mysqladmin_output =~ s/count\(\*\)\n\r?//x;
+  $mysqladmin_output =~ s/count.*\n\r?//x;
 
-  my @rows = split(/\n\r?/, $mysqladmin_output);
+  my @rows = split(/\n\r?/x, $mysqladmin_output);
   my $online = 0;
   my $zap = 0;
   my $guest = 0;
   my $unknown = 0;
 
   foreach my $row (@rows) {
-    if($row =~ /(\d+)\s(\d+)/) {
+    if($row =~ /(\d+)\s(\d+)\s(\d+)\s(\d+)/xm) {
       $online = $1;
       $zap = $2;
-      $guest = $3;
-      $unknown = $4;
+      $guest = $3 || 0;
+      $unknown = $4 || 0;
     }
   }
 
-  print "$zap\n$online\n$guest\n$unknown\n";
+  if ($attr->{GUEST}) {
+   print "$guest\n$unknown\n";
+  }
+  else {
+    print "$zap\n$online\n";
+  }
 
   return 1;
 }
@@ -1235,6 +1250,60 @@ sub apache_servers {
   my $total = $busy_servers + $idle_servers;
 
   print "$busy_servers\n$total\n";
+
+  return 1;
+}
+
+
+
+#**********************************************************
+=head2 disc_io($attr)
+
+Arguments:
+  $attr
+
+Results:
+
+=cut
+#**********************************************************
+sub disc_io {
+  my($disk)=@_;
+
+  if (!$disk) {
+    die "Usage: $0 <disk_name>\n";
+  }
+
+  my $cmd = "iostat -d -w 1 -c 2 $disk";
+  if ($debug > 1) {
+    print "$cmd\n";
+  }
+  open(my $fh, "-|", $cmd) or die "Cannot run iostat: $!";
+  my ($read_kb, $write_kb) = (0, 0);
+
+  while (<$fh>) {
+    if ($_ =~ /^\s*$disk\s+\S+\s+\S+\s+(\S+)/xm) {
+      my $mb_per_sec = $1;
+    }
+  }
+  close($fh);
+
+  $cmd = "iostat -x -c 2 $disk";
+  if ($debug > 1) {
+    print "$cmd\n";
+  }
+
+  open(my $fh_x, "-|", $cmd) or die $!;
+  while (<$fh_x>) {
+    # iostat -x: device r/s w/s kr/s kw/s ...
+    if ($_ =~ /^\s*$disk\s+\S+\s+\S+\s+(\S+)\s+(\S+)/xm) {
+      $read_kb = int($1 * 1024);
+      $write_kb = int($2 * 1024);
+    }
+  }
+  close($fh_x);
+
+  print "$read_kb\n";
+  print "$write_kb\n";
 
   return 1;
 }
